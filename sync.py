@@ -6,6 +6,8 @@ from psycopg2 import IntegrityError
 
 import logging
 from itertools import islice
+import time
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -67,26 +69,28 @@ logging.info("Starting from line number %s", last_line_number + 1)
 batch = []
 batch_size = 1000  # You can adjust this based on your requirements
 
-with open('efficient_addresses.txt', 'r') as file:
-    current_line = last_line_number + 1
-    while True:
-        lines = list(islice(file, batch_size))
-        if not lines:
-            break
+while True:
+    with open('efficient_addresses.txt', 'r') as file:
+        current_line = last_line_number + 1
+        while True:
+            lines = list(islice(file, batch_size))
+            if not lines:
+                time.sleep(5)  # Wait for 5 seconds before checking the file again
+                break
 
-        for line in lines:
-            current_line += 1
-            if current_line <= last_line_number:
-                continue
+            for line in lines:
+                current_line += 1
+                if current_line <= last_line_number:
+                    continue
 
-            parts = line.strip().split(' => ')
-            if len(parts) == 3:
-                salt, address, reward = parts
-                total_zeroes, leading_zeroes = count_zeroes(address)
-                batch.append((salt, address, int(reward), total_zeroes, leading_zeroes, current_line))
+                parts = line.strip().split(' => ')
+                if len(parts) == 3:
+                    salt, address, reward = parts
+                    total_zeroes, leading_zeroes = count_zeroes(address)
+                    batch.append((salt, address, int(reward), total_zeroes, leading_zeroes, current_line))
 
-        sync_batch_to_db(batch)
-        batch = []  # Reset batch after syncing
+            sync_batch_to_db(batch)
+            batch = []  # Reset batch after syncing
 
 # Sync any remaining records that didn't fill up the last batch
 sync_batch_to_db(batch)
