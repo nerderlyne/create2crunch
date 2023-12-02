@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 conn_url = os.getenv('DB_URL')
 conn_pool = psycopg2.pool.SimpleConnectionPool(1, 10, conn_url)
+caller = os.getenv('CALLER')
 
 def count_zeroes(address):
     # Remove the '0x' prefix for correct processing
@@ -27,7 +28,7 @@ def get_last_line_number():
     conn = conn_pool.getconn()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT MAX(line_number) FROM crunch")
+        cur.execute("SELECT MAX(line_number) FROM crunch WHERE caller_address=%s", (caller,))
         result = cur.fetchone()
         return result[0] if result[0] is not None else 0
     except Exception as e:
