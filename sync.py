@@ -2,6 +2,8 @@ import os
 import re
 import psycopg2
 import psycopg2.pool
+from psycopg2 import IntegrityError
+
 import logging
 from itertools import islice
 # Set up logging
@@ -45,8 +47,13 @@ def sync_batch_to_db(batch):
     cur = conn.cursor()
 
     try:
-        cur.executemany("INSERT INTO crunch (salt, address, reward, totalZeroes, leadingZeroes, line_number) VALUES (%s, %s, %s, %s, %s, %s)",
-                        batch)
+        for record in batch:
+            try:
+                cur.execute("INSERT INTO crunch (salt, address, reward, totalZeroes, leadingZeroes, line_number) VALUES (%s, %s, %s, %s, %s, %s)",
+                            record)
+            except IntegrityError:
+                conn.rollback()
+                continue
         conn.commit()
         logging.info("Successfully synced a batch of %s records", len(batch))
     except Exception as e:
